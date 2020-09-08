@@ -74,7 +74,9 @@ def train_and_eval(rank, n_gpus, hps):
   epoch_str = 1
   global_step = 0
   try:
+    print("ABOUT TO LOAD")
     _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"), generator, optimizer_g)
+    print("LOADED", epoch_str)
     epoch_str += 1
     optimizer_g.step_num = (epoch_str - 1) * len(train_loader)
     optimizer_g._update_learning_rate()

@@ -12,6 +12,7 @@ import models
 import commons
 import utils
 from text.symbols import symbols
+import sys
                             
 
 class FlowGenerator_DDI(models.FlowGenerator):
@@ -22,6 +23,8 @@ class FlowGenerator_DDI(models.FlowGenerator):
       if getattr(f, "set_ddi", False):
         f.set_ddi(True)
 
+def repl_test():
+  sys.argv = ['init.py', '-c', 'configs/base.json', '-m', 'trump']
 
 def main():
   hps = utils.get_hparams()
@@ -51,7 +54,14 @@ def main():
     _ = generator(x, x_lengths, y, y_lengths, gen=False)
     break
 
-  utils.save_checkpoint(generator, optimizer_g, hps.train.learning_rate, 0, os.path.join(hps.model_dir, "ddi_G.pth"))
+  # check for pretrained and load it without a an optimizer
+  pretrained_checkpoint_path = os.path.join(hps.model_dir, "pretrained.pth")
+  if os.path.isfile(pretrained_checkpoint_path):
+    logger.info("Loading pretrained checkpoint: %s" % pretrained_checkpoint_path)
+    model, optimizer, learning_rate, iteration = utils.load_checkpoint(pretrained_checkpoint_path, generator)
+    utils.save_checkpoint(model, optimizer_g, hps.train.learning_rate, 0, os.path.join(hps.model_dir, "ddi_G.pth"))
+  else:
+    utils.save_checkpoint(generator, optimizer_g, hps.train.learning_rate, 0, os.path.join(hps.model_dir, "ddi_G.pth"))
 
                             
 if __name__ == "__main__":
