@@ -8,6 +8,7 @@ import subprocess
 import numpy as np
 from scipy.io.wavfile import read
 import torch
+import GPUtil
 
 MATPLOTLIB_FLAG = False
 
@@ -65,6 +66,14 @@ def summarize(writer, global_step, scalars={}, histograms={}, images={}):
     writer.add_histogram(k, v, global_step)
   for k, v in images.items():
     writer.add_image(k, v, global_step, dataformats='HWC')
+
+  # adding logging for GPU utilization and memory usage
+  gpus = GPUtil.getGPUs()
+  for gpu in gpus:
+    k = 'gpu' + str(gpu.id)
+    writer.add_scalar(k + '/memory', gpu.memoryUsed, global_step)
+    writer.add_scalar(k + '/load', gpu.load, global_step)
+
 
 
 def latest_checkpoint_path(dir_path, regex="G_*.pth"):
