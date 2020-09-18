@@ -8,12 +8,24 @@ import subprocess
 import numpy as np
 from scipy.io.wavfile import read
 import torch
-import GPUtil
+
 
 MATPLOTLIB_FLAG = False
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging
+
+def get_gpu_stats():
+  _output_to_list = lambda x: x.decode('ascii').split('\n')[:-1]
+
+  ACCEPTABLE_AVAILABLE_MEMORY = 1024
+  COMMAND = "nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv"
+  info = _output_to_list(sp.check_output(COMMAND.split()))[1:][0].split()
+  memory_used = int(info[0])
+  memory_total = int(info[2])
+  memory_used_pct = int((memory_used / memory_total) * 100)
+  utilization = int(info[4])
+  return memory_used_pct, utilization
 
 def load_checkpoint(checkpoint_path, model, optimizer=None):
   assert os.path.isfile(checkpoint_path)
@@ -68,12 +80,11 @@ def summarize(writer, global_step, scalars={}, histograms={}, images={}):
     writer.add_image(k, v, global_step, dataformats='HWC')
 
   # adding logging for GPU utilization and memory usage
-  gpus = GPUtil.getGPUs()
-  for gpu in gpus:
-    k = 'gpu' + str(gpu.id)
-    writer.add_scalar(k + '/memory', gpu.memoryUsed, global_step)
-    writer.add_scalar(k + '/load', gpu.load, global_step)
-
+  gpu_memory_used, gpu_utilization = get_gpu_stats()
+  k = 'gpu' + str(0)
+  writer.add_scalar(k + '/memory', gpu_memory_used, global_step)
+  writer.add_scalar(k + '/load', gpu_utilization, global_step)
+  writer.flush()
 
 
 def latest_checkpoint_path(dir_path, regex="G_*.pth"):
