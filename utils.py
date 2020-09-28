@@ -203,6 +203,16 @@ def get_hparams_from_dir(model_dir):
   return hparams
 
 
+def get_hparams_from_json(checkpoint_path, json_path):
+  with open(json_path, "r") as f:
+    data = f.read()
+  config = json.loads(data)
+
+  hparams =HParams(**config)
+  hparams.model_dir = checkpoint_path
+  return hparams
+
+
 def check_git_hash(model_dir):
   source_dir = os.path.dirname(os.path.realpath(__file__))
   if not os.path.exists(os.path.join(source_dir, ".git")):
