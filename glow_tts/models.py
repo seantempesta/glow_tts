@@ -3,10 +3,10 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-import modules
-import commons
-import attentions
-import monotonic_align
+import glow_tts.modules as modules
+import glow_tts.commons as commons
+import glow_tts.attentions as attentions
+import glow_tts.monotonic_align as monotonic_align
 
 
 class DurationPredictor(nn.Module):

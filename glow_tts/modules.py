@@ -6,7 +6,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-import commons
+import glow_tts.commons as commons
 
 
 class LayerNorm(nn.Module):
