@@ -6,7 +6,8 @@ from glow_tts import models
 import glow_tts.utils as glow_utils
 from glow_tts.text import text_to_sequence, cmudict
 
-def init(checkpoint_path, config_path, device="cuda"):
+
+def init(checkpoint_path, config_path, device="cpu"):
     hps = glow_utils.get_hparams_from_json(checkpoint_path, config_path)
     model = models.FlowGenerator(
         len(symbols),
@@ -25,7 +26,7 @@ def init(checkpoint_path, config_path, device="cuda"):
     return cmu_dict, model
 
 # function to generate speech
-def predict(cmu_dict, model, text, device="cuda"):
+def predict(cmu_dict, model, text, device="cpu"):
   sequence = np.array(text_to_sequence(text, ['english_cleaners'], cmu_dict))[None, :]
   x_tst = torch.autograd.Variable(torch.from_numpy(sequence)).to(device).long()
   x_tst_lengths = torch.tensor([x_tst.shape[1]]).to(device)
@@ -37,8 +38,8 @@ def predict(cmu_dict, model, text, device="cuda"):
 
 
 def repl_test():
-    checkpoint_path = './pretrained.pth'
-    config_path = './configs/base.json'
+    checkpoint_path = '/home/sean/Downloads/pretrained.pth'
+    config_path = './glow_tts/configs/base.json'
     device = "cpu"
     cmu_dict, model = init(checkpoint_path, config_path, device=device)
 
