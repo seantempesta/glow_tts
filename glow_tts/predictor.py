@@ -26,13 +26,12 @@ def init(checkpoint_path, config_path, device="cpu"):
     return cmu_dict, model
 
 # function to generate speech
-def predict(cmu_dict, model, text, device="cpu"):
+def predict(cmu_dict, model, text, device="cpu", length_scale=1.0):
   sequence = np.array(text_to_sequence(text, ['english_cleaners'], cmu_dict))[None, :]
   x_tst = torch.autograd.Variable(torch.from_numpy(sequence)).to(device).long()
   x_tst_lengths = torch.tensor([x_tst.shape[1]]).to(device)
   with torch.no_grad():
     noise_scale = .667
-    length_scale = 1.20
     (y_gen_tst, *r), attn_gen, *_ = model(x_tst, x_tst_lengths, gen=True, noise_scale=noise_scale, length_scale=length_scale)
     return y_gen_tst.cpu()
 
