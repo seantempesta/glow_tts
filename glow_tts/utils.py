@@ -8,25 +8,11 @@ import subprocess
 import numpy as np
 from scipy.io.wavfile import read
 import torch
-import subprocess as sp
-
 
 MATPLOTLIB_FLAG = False
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging
-
-def get_gpu_stats():
-  _output_to_list = lambda x: x.decode('ascii').split('\n')[:-1]
-
-  ACCEPTABLE_AVAILABLE_MEMORY = 1024
-  COMMAND = "nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv"
-  info = _output_to_list(sp.check_output(COMMAND.split()))[1:][0].split()
-  memory_used = int(info[0])
-  memory_total = int(info[2])
-  memory_used_pct = int((memory_used / memory_total) * 100)
-  utilization = int(info[4])
-  return memory_used_pct, utilization
 
 def load_checkpoint(checkpoint_path, model, optimizer=None):
   assert os.path.isfile(checkpoint_path)
@@ -79,13 +65,6 @@ def summarize(writer, global_step, scalars={}, histograms={}, images={}):
     writer.add_histogram(k, v, global_step)
   for k, v in images.items():
     writer.add_image(k, v, global_step, dataformats='HWC')
-
-  # adding logging for GPU utilization and memory usage
-  gpu_memory_used, gpu_utilization = get_gpu_stats()
-  k = 'gpu' + str(0)
-  writer.add_scalar(k + '/memory', gpu_memory_used, global_step)
-  writer.add_scalar(k + '/load', gpu_utilization, global_step)
-  writer.flush()
 
 
 def latest_checkpoint_path(dir_path, regex="G_*.pth"):
@@ -203,13 +182,12 @@ def get_hparams_from_dir(model_dir):
   return hparams
 
 
-def get_hparams_from_json(checkpoint_path, json_path):
-  with open(json_path, "r") as f:
+def get_hparams_from_file(config_path):
+  with open(config_path, "r") as f:
     data = f.read()
   config = json.loads(data)
 
   hparams =HParams(**config)
-  hparams.model_dir = checkpoint_path
   return hparams
 
 

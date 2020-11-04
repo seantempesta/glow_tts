@@ -5,12 +5,13 @@ from glow_tts.text.symbols import symbols
 from glow_tts import models
 import glow_tts.utils as glow_utils
 from glow_tts.text import text_to_sequence, cmudict
+import glow_tts.commons as commons
 
 
 def init(checkpoint_path, config_path, device="cpu"):
-    hps = glow_utils.get_hparams_from_json(checkpoint_path, config_path)
+    hps = glow_utils.get_hparams_from_file(config_path)
     model = models.FlowGenerator(
-        len(symbols),
+        len(symbols) + getattr(hps.data, "add_blank", False),
         out_channels=hps.data.n_mel_channels,
         **hps.model).to(device)
 
@@ -25,22 +26,44 @@ def init(checkpoint_path, config_path, device="cpu"):
 
     return cmu_dict, model
 
+
 # function to generate speech
-def predict(cmu_dict, model, text, device="cpu", length_scale=1.0):
-  sequence = np.array(text_to_sequence(text, ['english_cleaners'], cmu_dict))[None, :]
-  x_tst = torch.autograd.Variable(torch.from_numpy(sequence)).to(device).long()
-  x_tst_lengths = torch.tensor([x_tst.shape[1]]).to(device)
-  with torch.no_grad():
-    noise_scale = .667
-    (y_gen_tst, *r), attn_gen, *_ = model(x_tst, x_tst_lengths, gen=True, noise_scale=noise_scale, length_scale=length_scale)
-    return y_gen_tst.cpu()
+def predict(cmu_dict, model, text, device="cpu", length_scale=1.0, blanks=False):
+    if blanks:
+        text_norm = text_to_sequence(text.strip(), ['english_cleaners'], cmu_dict)
+        text_norm = commons.intersperse(text_norm, len(symbols))
+    else:  # adding spaces at the beginning and the end of utterance improves quality
+        tst_stn = " " + text.strip() + " "
+        text_norm = text_to_sequence(tst_stn.strip(), ['english_cleaners'], cmu_dict)
+
+    sequence = np.array(text_norm)[None, :]
+    print("".join([symbols[c] if c < len(symbols) else "<BNK>" for c in sequence[0]]))
+    x_tst = torch.autograd.Variable(torch.from_numpy(sequence)).to(device).long()
+    x_tst_lengths = torch.tensor([x_tst.shape[1]]).to(device)
+    with torch.no_grad():
+        noise_scale = .667
+        (y_gen_tst, *_), *_, (attn_gen, *_) = model(x_tst, x_tst_lengths, gen=True, noise_scale=noise_scale,
+                                                    length_scale=length_scale)
+        return y_gen_tst.cpu()
 
 
 def repl_test():
-    checkpoint_path = '/home/sean/Downloads/pretrained.pth'
-    config_path = './glow_tts/configs/base.json'
+
+    # blanks
+    blanks = True
+    checkpoint_path = 'data/pretrained_blank.pth'
+    checkpoint_path = 'data/G_3009.pth'
+    config_path = 'data/blanks.json'
+
+    # normal
+    blanks = False
+    checkpoint_path = 'data/pretrained.pth'
+    config_path = 'glow_tts/configs/base.json'
+
+    # load model
     device = "cpu"
     cmu_dict, model = init(checkpoint_path, config_path, device=device)
 
-    text = "say something"
-    audio = predict(cmu_dict, model, text, device=device)
+    # test prediction
+    text = "what the actual fuck is going on?"
+    audio = predict(cmu_dict, model, text, device=device, blanks=blanks)
